@@ -1,16 +1,31 @@
 {
-  "name": "n8n-bannerbite",
+  "name": "n8n-nodes-bannerbite",
   "version": "1.0.0",
+  "description": "n8n node to interact with Bannerbite API to create dynamic creatives",
+  "keywords": [
+    "n8n-community-node-package",
+    "bannerbite",
+    "creative",
+    "marketing"
+  ],
+  "license": "MIT",
+  "homepage": "https://bannerbite.com",
+  "author": {
+    "name": "Bannerbite",
+    "email": "support@bannerbite.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bannerbite/n8n-nodes-bannerbite.git"
+  },
   "main": "dist/index.js",
   "scripts": {
     "build": "npx tsc",
-    "start": "node dist/index.js",
-    "dev": "ts-node src/index.ts",
+    "dev": "npm run build && n8n start",
     "lint": "eslint nodes credentials src --ext .ts",
-    "lint:fix": "eslint nodes credentials src --ext .ts --fix",
+    "lintfix": "eslint nodes credentials src --ext .ts --fix",
     "prepublishOnly": "npm run build",
-    "env:example": "cp .env.example .env",
-    "env:check": "ts-node src/utils/check-env.ts"
+    "test": "jest"
   },
   "files": [
     "dist"
@@ -21,7 +36,7 @@
       "dist/credentials/BannerbiteApi.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/Bannerbite/BannerbiteNode.node.js"
+      "dist/nodes/CustomNode/BannerbiteNode.node.js"
     ]
   },
   "devDependencies": {
@@ -32,19 +47,18 @@
     "@typescript-eslint/parser": "^5.62.0",
     "eslint": "^8.18.0",
     "eslint-plugin-n8n-nodes-base": "^1.11.0",
+    "jest": "^29.5.0",
     "n8n-core": "^1.14.1",
     "n8n-workflow": "^1.14.1",
+    "ts-jest": "^29.1.0",
     "ts-node": "^10.9.2",
     "typescript": "~4.8.4"
   },
   "dependencies": {
-    "dotenv": "^16.5.0",
     "node-fetch": "^2.6.7"
   },
-  "keywords": [
-    "n8n-community-node-package"
-  ],
-  "author": "",
-  "license": "MIT",
-  "description": "Custom n8n node with API key authentication and dynamic form generation"
+  "peerDependencies": {
+    "n8n-core": ">=0.125.0",
+    "n8n-workflow": ">=0.107.0"
+  }
 }
