@@ -5,7 +5,7 @@ import type {
 
 export class BannerbiteApi implements ICredentialType {
   name = 'bannerbiteApi';
-  displayName = 'Bannerbite Api';
+  displayName = 'Bannerbite';
   documentationUrl = 'https://support.bannerbite.com/integrations/n8n';
   properties: INodeProperties[] = [
     {
