@@ -12,198 +12,122 @@ import {
 } from 'n8n-workflow';
 import fetch from 'node-fetch';
 
-// Type for API response
-interface IApiResponse<T = IDataObject> {
-  data?: T;
-  error?: string;
-}
-
 // Type for API credentials
 interface IApiCredentials extends ICredentialDataDecryptedObject {
   apiKey: string;
   baseUrl: string;
 }
 
-// Type for resource field
-interface IResourceField {
+// Type for project
+interface IProject {
   id: string;
   name: string;
-  type: string;
-  required: boolean;
   description?: string;
-  options?: Array<{ value: string; name: string }>;
+}
+
+// Type for bite
+interface IBite {
+  id: string;
+  name: string;
+  project_id: string;
+  description?: string;
+}
+
+// Type for scene data
+interface ISceneData {
+  id: string;
+  label: string;
+  key: string;
+  value: any;
+  type?: string;
+  [key: string]: any;
 }
 
 export class BannerbiteNode implements INodeType {
   description: INodeTypeDescription = {
-    displayName: 'Bannerbite Node',
+    displayName: 'Bannerbite',
     name: 'bannerbiteNode',
-    icon: 'fa:server',
     group: ['transform'],
     version: 1,
-    subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
     description: 'Interact with Bannerbite API',
     defaults: {
-      name: 'Bannerbite API',
+      name: 'Bannerbite',
       color: '#1A82E2',
     },
     inputs: [NodeConnectionType.Main],
     outputs: [NodeConnectionType.Main],
     credentials: [
       {
-        name: 'BannerbiteApi',
+        name: 'bannerbiteApi',
         required: true,
       },
     ],
-    requestDefaults: {
-      baseURL: '={{$credentials.baseUrl}}',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-    },
     properties: [
-      {
-        displayName: 'Resource',
-        name: 'resource',
-        type: 'options',
-        noDataExpression: true,
-        options: [
-          {
-            name: 'Users',
-            value: 'users',
-          },
-          {
-            name: 'Products',
-            value: 'products',
-          },
-        ],
-        default: 'users',
-        required: true,
-        description: 'Resource to operate on',
-      },
       {
         displayName: 'Operation',
         name: 'operation',
         type: 'options',
         noDataExpression: true,
-        displayOptions: {
-          show: {
-            resource: ['users', 'products'],
-          },
-        },
         options: [
           {
-            name: 'Get',
-            value: 'get',
-            action: 'Get a resource',
-            description: 'Get a single resource by ID',
-            routing: {
-              request: {
-                method: 'GET',
-                url: '={{ "/" + $parameter["resource"] + "/" + $parameter["id"] }}',
-              },
-            },
-          },
-          {
-            name: 'Get All',
-            value: 'getAll',
-            action: 'Get all resources',
-            description: 'Get all resources',
-            routing: {
-              request: {
-                method: 'GET',
-                url: '={{ "/" + $parameter["resource"] }}',
-                qs: {
-                  page: '={{$parameter.returnAll ? undefined : $parameter.limit}}',
-                  per_page: '={{$parameter.limit}}',
-                },
-              },
-              output: {
-                postReceive: [
-                  {
-                    type: 'rootProperty',
-                    properties: {
-                      property: 'data',
-                    },
-                  },
-                ],
-              },
-            },
+            name: 'Get Scene Data',
+            value: 'getSceneData',
+            action: 'Get scene data for a bite',
           },
         ],
-        default: 'getAll',
+        default: 'getSceneData',
       },
       {
-        displayName: 'ID',
-        name: 'id',
-        type: 'string',
-        displayOptions: {
-          show: {
-            operation: ['get', 'update', 'delete'],
-          },
+        displayName: 'Project',
+        name: 'projectId',
+        type: 'options',
+        description: 'Select a project',
+        typeOptions: {
+          loadOptionsMethod: 'getProjects',
         },
         default: '',
         required: true,
-        description: 'ID of the resource to operate on',
-      },
-      {
-        displayName: 'Return All',
-        name: 'returnAll',
-        type: 'boolean',
         displayOptions: {
           show: {
-            operation: ['getAll'],
+            operation: ['getSceneData'],
           },
         },
-        default: false,
-        description: 'Whether to return all results or only up to a given limit',
       },
       {
-        displayName: 'Limit',
-        name: 'limit',
-        type: 'number',
+        displayName: 'Bite',
+        name: 'biteId',
+        type: 'options',
+        description: 'Select a bite from the project',
         typeOptions: {
-          minValue: 1,
+          loadOptionsMethod: 'getBites',
+          loadOptionsDependsOn: ['projectId'],
         },
+        default: '',
+        required: true,
         displayOptions: {
           show: {
-            operation: ['getAll'],
-            returnAll: [false],
+            operation: ['getSceneData'],
           },
         },
-        default: 50,
-        description: 'Max number of results to return',
       },
       {
-        displayName: 'Filters',
-        name: 'filters',
+        displayName: 'Output',
+        name: 'output',
         type: 'collection',
-        placeholder: 'Add Filter',
+        placeholder: 'Add Output',
         default: {},
         displayOptions: {
           show: {
-            operation: ['getAll'],
+            operation: ['getSceneData'],
           },
         },
         options: [
           {
-            displayName: 'Filter Field',
-            name: 'filterField',
-            type: 'options',
-            typeOptions: {
-              loadOptionsDependsOn: ['resource'],
-              loadOptionsMethod: 'getFilterFields',
-            },
-            default: '',
-            description: 'Field to filter by',
-          },
-          {
-            displayName: 'Filter Value',
-            name: 'filterValue',
-            type: 'string',
-            default: '',
-            description: 'Value to filter by',
+            displayName: 'Include All Fields',
+            name: 'includeAllFields',
+            type: 'boolean',
+            default: true,
+            description: 'Whether to include all fields in the output',
           },
         ],
       },
@@ -212,13 +136,11 @@ export class BannerbiteNode implements INodeType {
 
   methods = {
     loadOptions: {
-      // Load available filter fields from the API
-      async loadOptions(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
-        const resource = this.getNodeParameter('resource', 0) as string;
-        const credentials = await this.getCredentials('customApi') as IApiCredentials;
-
+      async getProjects(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+        const credentials = await this.getCredentials('bannerbiteApi') as IApiCredentials;
+        
         try {
-          const response = await fetch(`${credentials.baseUrl}/fields/${resource}`, {
+          const response = await fetch(`${credentials.baseUrl}/api/projects`, {
             method: 'GET',
             headers: {
               'Content-Type': 'application/json',
@@ -227,134 +149,153 @@ export class BannerbiteNode implements INodeType {
           });
 
           if (!response.ok) {
-            throw new Error(`Failed to load fields: ${response.statusText}`);
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.message || 'Failed to fetch projects');
           }
 
-          const data = await response.json() as { fields: IResourceField[] };
-          
-          return data.fields.map((field: IResourceField) => ({
-            name: field.name,
-            value: field.id,
-            description: field.description || '',
+          const projects = await response.json() as IProject[];
+          return projects.map((project) => ({
+            name: project.name || `Project ${project.id}`,
+            value: project.id,
+            description: project.description || '',
           }));
+
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-          throw new Error(`Error loading fields: ${errorMessage}`);
+          throw new NodeOperationError(
+            this.getNode(),
+            `Error loading projects: ${errorMessage}`,
+            { description: 'Check your API key and network connection' }
+          );
+        }
+      },
+
+      async getBites(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+        const projectId = this.getNodeParameter('projectId') as string;
+        const credentials = await this.getCredentials('bannerbiteApi') as IApiCredentials;
+        
+        if (!projectId) {
+          return [];
+        }
+
+        try {
+          const response = await fetch(
+            `${credentials.baseUrl}/api/bites?project_id=${projectId}&limit=100`,
+            {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${credentials.apiKey}`,
+              },
+            }
+          );
+
+          if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.message || 'Failed to fetch bites');
+          }
+
+          const bites = await response.json() as IBite[];
+          return bites.map((bite) => ({
+            name: bite.name || `Bite ${bite.id}`,
+            value: bite.id,
+            description: bite.description || '',
+          }));
+
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+          throw new NodeOperationError(
+            this.getNode(),
+            `Error loading bites: ${errorMessage}`,
+            { description: 'Check if the project ID is valid and you have access to it' }
+          );
         }
       },
     },
   };
 
   async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
+    const items = this.getInputData();
     const returnData: INodeExecutionData[] = [];
-    const resource = this.getNodeParameter('resource', 0) as string;
     const operation = this.getNodeParameter('operation', 0) as string;
-    
-    try {
-      // Get credentials with proper type assertion
-      const credentials = await this.getCredentials('customApi') as IApiCredentials;
-      
-      if (!credentials) {
-        throw new NodeOperationError(this.getNode(), 'No credentials found for Custom API');
-      }
+    const credentials = await this.getCredentials('bannerbiteApi') as IApiCredentials;
 
-      // Initialize response data
-      let responseData: unknown;
-      let endpoint = `/${resource}`;
-
-      // Helper function to make API requests
-      const makeApiRequest = async (
-        endpoint: string,
-        method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
-        body?: unknown
-      ): Promise<IApiResponse> => {
-        try {
-          const response = await fetch(`${credentials.baseUrl}${endpoint}`, {
-            method,
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${credentials.apiKey}`,
-            },
-            ...(body ? { body: JSON.stringify(body) } : {}),
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({} as IDataObject));
-            const errorMessage = errorData.message || response.statusText || 'Unknown error occurred';
-            throw new Error(`API request failed: ${response.status} - ${errorMessage}`);
-          }
-
-          return response.json();
-        } catch (error) {
-          if (error instanceof Error) {
-            throw new NodeOperationError(this.getNode(), `API request failed: ${error.message}`, { itemIndex: 0 });
-          }
-          throw new NodeOperationError(this.getNode(), 'API request failed', { itemIndex: 0 });
-        }
-      };
-
-      // Handle different operations
-      switch (operation) {
-        case 'getAll': {
-          const returnAll = this.getNodeParameter('returnAll', 0) as boolean;
-          const filters = this.getNodeParameter('filters', 0, {}) as {
-            filterField?: string;
-            filterValue?: string;
+    for (let i = 0; i < items.length; i++) {
+      try {
+        if (operation === 'getSceneData') {
+          const biteId = this.getNodeParameter('biteId', i) as string;
+          const outputOptions = this.getNodeParameter('output', i, {}) as {
+            includeAllFields?: boolean;
           };
 
-          const queryParams = new URLSearchParams();
+          // Get scene data
+          const response = await fetch(
+            `${credentials.baseUrl}/api/zapier/bites/sceneData/${biteId}`,
+            {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${credentials.apiKey}`,
+              },
+            }
+          );
 
-          if (!returnAll) {
-            const limit = this.getNodeParameter('limit', 0) as number;
-            queryParams.append('limit', limit.toString());
+          if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.message || 'Failed to fetch scene data');
           }
 
-          if (filters.filterField && filters.filterValue) {
-            queryParams.append(filters.filterField, filters.filterValue);
-          }
+          const sceneData = await response.json() as ISceneData | ISceneData[];
+          const scenes = Array.isArray(sceneData) ? sceneData : [sceneData];
 
-          if (queryParams.toString()) {
-            endpoint += `?${queryParams.toString()}`;
-          }
-          
-          const response = await makeApiRequest(endpoint, 'GET');
-          responseData = response.data;
-          break;
-        }
-        
-        case 'get': {
-          const id = this.getNodeParameter('id', 0) as string;
-          const response = await makeApiRequest(`${endpoint}/${id}`, 'GET');
-          responseData = response.data;
-          break;
-        }
-        
-        default:
-          throw new NodeOperationError(this.getNode(), `Operation '${operation}' is not supported`);
-      }
+          // Format the output
+          const formattedData = scenes.map((scene) => {
+            const baseData = {
+              sceneId: scene.id,
+              sceneName: scene.label || scene.key,
+              biteId,
+              projectId: this.getNodeParameter('projectId', i) as string,
+            };
 
-      // Process the response data
-      if (Array.isArray(responseData)) {
-        for (const item of responseData) {
-          returnData.push({
-            json: item as IDataObject,
+            if (outputOptions.includeAllFields !== false) {
+              return {
+                json: {
+                  ...baseData,
+                  ...scene,
+                },
+              };
+            }
+
+            // Return only specific fields if includeAllFields is false
+            return {
+              json: {
+                ...baseData,
+                label: scene.label,
+                key: scene.key,
+                value: scene.value,
+                type: scene.type || 'text',
+              },
+            };
           });
-        }
-      } else if (responseData) {
-        returnData.push({
-          json: responseData as IDataObject,
-        });
-      }
 
-      return [returnData];
-    } catch (error) {
-      if (this.continueOnFail()) {
-        return [[{ json: { error: error instanceof Error ? error.message : 'Unknown error occurred' } }]];
+          returnData.push(...formattedData);
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        if (this.continueOnFail()) {
+          returnData.push({
+            json: {
+              error: errorMessage,
+              node: this.getNode().name,
+              timestamp: new Date().toISOString(),
+            },
+          });
+          continue;
+        }
+        throw new NodeOperationError(this.getNode(), errorMessage, { itemIndex: i });
       }
-      if (error instanceof Error) {
-        throw new NodeOperationError(this.getNode(), error.message, { description: error.message });
-      }
-      throw new NodeOperationError(this.getNode(), 'An unknown error occurred');
     }
+
+    return this.prepareOutputData(returnData);
   }
 }
