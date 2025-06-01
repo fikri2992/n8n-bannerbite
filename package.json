@@ -26,7 +26,9 @@
     "lint": "eslint nodes credentials src --ext .ts",
     "lintfix": "eslint nodes credentials src --ext .ts --fix",
     "prepublishOnly": "npm run build",
-    "test": "jest"
+    "test": "jest",
+    "deploy": "npm run build && npm pack && docker compose down && docker compose up -d --force-recreate --build",
+    "deploy-safe": "npm run build && npm pack && docker compose up -d --build --no-deps n8n"
   },
   "files": [
     "dist"

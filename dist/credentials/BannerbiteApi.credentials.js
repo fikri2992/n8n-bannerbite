@@ -4,7 +4,7 @@ exports.BannerbiteApi = void 0;
 class BannerbiteApi {
     constructor() {
         this.name = 'bannerbiteApi';
-        this.displayName = 'Bannerbite API';
+        this.displayName = 'Bannerbite Api';
         this.documentationUrl = 'https://bannerbite.com/docs/auth';
         this.properties = [
             {
