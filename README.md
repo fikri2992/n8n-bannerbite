@@ -21,6 +21,12 @@ A custom n8n node that provides API key authentication and dynamic form generati
 - npm 9 or later
 - n8n instance
 
+### Dependencies
+
+This node uses the following n8n dependencies:
+- n8n-workflow: Core workflow functionality
+- n8n-core: Essential n8n core components
+
 ### Installation
 
 1. Clone the repository:
@@ -33,6 +39,8 @@ A custom n8n node that provides API key authentication and dynamic form generati
    ```bash
    npm install
    ```
+
+   This will install all required dependencies including n8n-workflow and n8n-core.
 
 3. Set up environment variables:
    ```bash
@@ -131,7 +139,13 @@ The node supports dynamic field loading from your API. When you select a resourc
 ### Development Workflow
 
 1. Make your changes in the `src` directory
-2. Run tests:
+2. Ensure all dependencies are properly imported in your node files:
+   ```typescript
+   import { INodeType, INodeTypeDescription } from 'n8n-workflow';
+   import { NodeApiError } from 'n8n-workflow';
+   import { IExecuteFunctions } from 'n8n-core';
+   ```
+3. Run tests:
    ```bash
    npm test
    ```

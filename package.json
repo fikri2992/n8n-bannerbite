@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc && npm run lint",
+    "build": "npx tsc",
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts",
     "lint": "eslint nodes credentials src --ext .ts",
@@ -18,17 +18,18 @@
   "n8n": {
     "n8nNodesApiVersion": 1,
     "credentials": [
-      "dist/credentials/CustomApi.credentials.js"
+      "dist/credentials/BannerbiteApi.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/CustomNode/CustomNode.node.js"
+      "dist/nodes/Bannerbite/BannerbiteNode.node.js"
     ]
   },
   "devDependencies": {
     "@types/express": "^4.17.6",
     "@types/node": "^18.19.110",
     "@types/node-fetch": "^2.6.4",
-    "@typescript-eslint/parser": "^5.29.0",
+    "@typescript-eslint/eslint-plugin": "^5.62.0",
+    "@typescript-eslint/parser": "^5.62.0",
     "eslint": "^8.18.0",
     "eslint-plugin-n8n-nodes-base": "^1.11.0",
     "n8n-core": "^1.14.1",

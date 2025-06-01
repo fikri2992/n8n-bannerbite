@@ -4,7 +4,7 @@ import type {
 } from 'n8n-workflow';
 
 export class BannerbiteApi implements ICredentialType {
-  name = 'BannerbiteApi';
+  name = 'bannerbiteApi';
   displayName = 'Bannerbite API Credentials';
   documentationUrl = 'https://bannerbite.com/docs/auth';
   properties: INodeProperties[] = [
