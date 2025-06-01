@@ -5,7 +5,7 @@ class BannerbiteApi {
     constructor() {
         this.name = 'bannerbiteApi';
         this.displayName = 'Bannerbite Api';
-        this.documentationUrl = 'https://bannerbite.com/docs/auth';
+        this.documentationUrl = 'https://support.bannerbite.com/integrations/n8n';
         this.properties = [
             {
                 displayName: 'API Key',

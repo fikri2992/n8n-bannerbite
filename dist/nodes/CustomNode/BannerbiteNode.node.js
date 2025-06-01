@@ -23,7 +23,7 @@ class BannerbiteNode {
                 resources: {
                     primaryDocumentation: [
                         {
-                            url: 'https://docs.bannerbite.com/integrations/n8n',
+                            url: 'https://support.bannerbite.com/integrations/n8n',
                         },
                     ],
                 },

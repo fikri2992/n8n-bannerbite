@@ -61,7 +61,7 @@ export class BannerbiteNode implements INodeType {
       resources: {
         primaryDocumentation: [
           {
-            url: 'https://docs.bannerbite.com/integrations/n8n',
+            url: 'https://support.bannerbite.com/integrations/n8n',
           },
         ],
       },
@@ -84,13 +84,6 @@ export class BannerbiteNode implements INodeType {
       {
         name: 'bannerbiteApi',
         required: true,
-        displayOptions: {
-          show: {
-            operation: [
-              'getSceneData'
-            ],
-          },
-        },
       },
     ],
     properties: [
