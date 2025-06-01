@@ -12,17 +12,16 @@ services:
       - N8N_EDITOR_BASE_URL=https://n8n.bannerbite.com
       - N8N_PORT=5678
       - N8N_PROTOCOL=https
-
+      - N8N_USER_FOLDER=/usr/local/lib/node_modules/n8n/.n8n
+      - N8N_CUSTOM_EXTENSIONS=/usr/local/lib/node_modules/n8n/.n8n/custom
       - N8N_MFA_ENABLED=false
       - N8N_SMTP_SSL=false
-      - N8N_USER_FOLDER=/home/node/.n8n
-      - N8N_CUSTOM_EXTENSIONS=/home/node/.n8n/custom
       - N8N_LOAD_FROM_FILE=false
       - N8N_ENCRYPTION_KEY=your-secret-encryption-key
       - N8N_DIAGNOSTICS_ENABLED=true
       - N8N_LOG_LEVEL=debug
     volumes:
-      - n8n_data:/home/node/.n8n
+      - n8n_data:/usr/local/lib/node_modules/n8n/.n8n
     user: "node"
 
 volumes:
