@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: n8n-bannerbite
+    container_name: n8n-nodes-bannerbite
     restart: unless-stopped
     ports:
       - '5678:5678'
@@ -25,4 +25,4 @@ services:
 
 volumes:
   n8n_data:
-    name: n8n-bannerbite-data
+    name: n8n-nodes-bannerbite-data

@@ -9,6 +9,7 @@ const node_fetch_1 = __importDefault(require("node-fetch"));
 class BannerbiteNode {
     constructor() {
         this.description = {
+            // Basic node details
             displayName: 'Bannerbite',
             name: 'bannerbite',
             icon: 'file:bannerbite.svg',
@@ -16,6 +17,23 @@ class BannerbiteNode {
             version: 1,
             subtitle: '={{$parameter["operation"]}}',
             description: 'Interact with Bannerbite API to create dynamic creatives',
+            // Node metadata for documentation
+            codex: {
+                categories: ['Marketing & Content'],
+                resources: {
+                    primaryDocumentation: [
+                        {
+                            url: 'https://docs.bannerbite.com/integrations/n8n',
+                        },
+                    ],
+                },
+                subcategories: {
+                    'Marketing & Content': [
+                        'Content Creation',
+                    ],
+                },
+            },
+            // Node appearance and behavior
             defaults: {
                 name: 'Bannerbite',
                 color: '#1A82E2',
@@ -424,10 +442,8 @@ class BannerbiteNode {
             try {
                 if (operation === 'getSceneData') {
                     const biteId = this.getNodeParameter('biteId', i);
-                    // Get the projectId for use in output data later
                     // Get the projectId for use in output data
                     const projectId = this.getNodeParameter('projectId', i);
-                    const outputOptions = this.getNodeParameter('output', i, {});
                     // Get static form values
                     const renderType = this.getNodeParameter('type', i);
                     const sceneNumber = this.getNodeParameter('scene', i);
@@ -448,111 +464,50 @@ class BannerbiteNode {
                     catch (e) {
                         // Scene data might not be set yet, which is fine
                     }
-                    // First, fetch the scene data structure
-                    const response = await (0, node_fetch_1.default)(`${credentials.baseUrl}/api/zapier/bites/sceneData/${biteId}`, {
-                        method: 'GET',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${credentials.apiKey}`,
-                        },
-                    });
-                    if (!response.ok) {
-                        const error = await response.json().catch(() => ({}));
-                        throw new Error(error.message || 'Failed to fetch scene data');
-                    }
-                    const data = await response.json();
-                    let sceneData = [];
-                    // Determine the format of the response
-                    if (Array.isArray(data)) {
-                        sceneData = data;
-                    }
-                    else if (data && typeof data === 'object') {
-                        // Check for common response formats
-                        if (data.data && Array.isArray(data.data)) {
-                            sceneData = data.data;
-                        }
-                        else if (data.scenes && Array.isArray(data.scenes)) {
-                            sceneData = data.scenes;
-                        }
-                        else if (data.items && Array.isArray(data.items)) {
-                            sceneData = data.items;
-                        }
-                        else if (data.id || data.key || data.label) {
-                            // Single scene object
-                            sceneData = data;
-                        }
-                        else {
-                            console.log('Unexpected API response format for scene data:', JSON.stringify(data));
-                            throw new Error('API response format for scene data is not as expected');
-                        }
-                    }
-                    else {
-                        throw new Error('API response for scene data is not in a valid format');
-                    }
-                    const scenes = Array.isArray(sceneData) ? sceneData : [sceneData];
-                    // Format the output
-                    const formattedData = scenes.map((scene) => {
-                        const sceneKey = scene.key;
-                        // Check if user provided a value for this scene field
-                        const userValue = userSceneData[sceneKey];
-                        // Create a consistent base data structure regardless of input format
-                        const baseData = {
-                            sceneId: scene.id || '',
-                            sceneName: scene.label || scene.key || (scene.name ? formatSceneName(scene.name) : ''),
-                            biteId,
-                            projectId,
-                            // Include static form values
-                            renderType,
-                            sceneNumber,
-                            webhookUrl,
-                            customMessage,
-                        };
-                        if (outputOptions.includeAllFields !== false) {
-                            const sceneData = {
-                                ...baseData,
-                                // Use optional properties from the scene object, but with defaults
-                                label: scene.label || formatSceneName(scene.name || scene.key),
-                                key: scene.key,
-                                // Use user-provided value if available, otherwise use default or empty string
-                                value: userValue !== undefined ? userValue : (scene.value || scene.default || ''),
-                                type: scene.type || 'text',
-                                userModified: userValue !== undefined,
-                            };
-                            // Merge with the rest of the scene properties for full data access
-                            return {
-                                json: {
-                                    ...sceneData,
-                                    ...scene,
-                                    // Ensure user value overrides any existing value
-                                    ...(userValue !== undefined ? { value: userValue } : {}),
-                                },
-                            };
-                        }
-                        // Return only specific fields if includeAllFields is false
-                        return {
-                            json: {
-                                ...baseData,
-                                label: scene.label || formatSceneName(scene.name || scene.key),
-                                key: scene.key,
-                                // Use user-provided value if available, otherwise use default
-                                value: userValue !== undefined ? userValue : (scene.value || scene.default || ''),
-                                type: scene.type || 'text',
-                                userModified: userValue !== undefined,
+                    // Prepare payload for the render API endpoint
+                    const payload = {
+                        bite_id: biteId,
+                        type: renderType,
+                        scene: sceneNumber,
+                        webhook: webhookUrl,
+                        custom_message: customMessage,
+                        // Add scene data fields to the top level of the payload
+                        ...userSceneData
+                    };
+                    // Make the request to the /api/integromat/render endpoint
+                    try {
+                        const renderResponse = await (0, node_fetch_1.default)(`${credentials.baseUrl}/api/integromat/render`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${credentials.apiKey}`,
                             },
-                        };
-                    });
-                    // Helper function to format scene names
-                    function formatSceneName(name) {
-                        if (!name)
-                            return '';
-                        let sceneName = name;
-                        sceneName = sceneName.replace(/_/gi, ' ');
-                        sceneName = sceneName.replace('sc', 'Scene ');
-                        sceneName = sceneName.replace('txt', 'Text');
-                        sceneName = sceneName.replace('img', 'Image');
-                        return sceneName;
+                            body: JSON.stringify(payload),
+                        });
+                        const renderResult = await renderResponse.json();
+                        if (!renderResponse.ok) {
+                            throw new Error(renderResult.message || 'Failed to render the bite');
+                        }
+                        // Return the render response data
+                        returnData.push({
+                            json: {
+                                success: true,
+                                message: renderResult.message || 'Render request has been sent, and now its in progress',
+                                biteId,
+                                projectId,
+                                renderType,
+                                sceneNumber,
+                                webhook: webhookUrl,
+                                customMessage,
+                                sceneData: userSceneData,
+                                response: renderResult,
+                            }
+                        });
                     }
-                    returnData.push(...formattedData);
+                    catch (renderError) {
+                        const errorMessage = renderError instanceof Error ? renderError.message : 'Unknown error occurred during render';
+                        throw new Error(`Error rendering bite: ${errorMessage}`);
+                    }
                 }
             }
             catch (error) {

@@ -7,13 +7,17 @@ USER root
 RUN mkdir -p /usr/local/lib/node_modules/n8n/.n8n/custom
 
 # Copy the packaged custom node
-COPY n8n-bannerbite-1.0.0.tgz /tmp/
+COPY n8n-nodes-bannerbite-1.0.0.tgz /tmp/
 
-# Install the custom node
+# Add build timestamp to force rebuild
+ARG BUILD_DATE=unknown
+LABEL build_date=$BUILD_DATE
+
+# Install the custom node with --no-cache
 RUN cd /tmp && \
-    npm install n8n-bannerbite-1.0.0.tgz && \
-    mkdir -p /usr/local/lib/node_modules/n8n/.n8n/custom/n8n-bannerbite && \
-    cp -r /tmp/node_modules/n8n-bannerbite/* /usr/local/lib/node_modules/n8n/.n8n/custom/n8n-bannerbite/ && \
+    npm install --no-cache n8n-nodes-bannerbite-1.0.0.tgz && \
+    mkdir -p /usr/local/lib/node_modules/n8n/.n8n/custom/n8n-nodes-bannerbite && \
+    cp -r /tmp/node_modules/n8n-nodes-bannerbite/* /usr/local/lib/node_modules/n8n/.n8n/custom/n8n-nodes-bannerbite/ && \
     chown -R node:node /usr/local/lib/node_modules/n8n/.n8n
 
 # Switch back to node user
